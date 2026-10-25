@@ -81,10 +81,13 @@ with sync_playwright() as p:
         check(f'{width}px: all 40 details open, disclose source, close with ESC and restore focus',details)
         def category_visibility():
             page.goto(BASE+'/menu/#category-beverages',wait_until='networkidle')
+            page.evaluate('document.fonts.ready')
+            if args.require_improvements:
+                page.wait_for_function('''()=>{const chip=document.querySelector('[data-cat=beverages]').getBoundingClientRect(),rail=document.querySelector('#category-rail').getBoundingClientRect();return chip.left>=rail.left-1&&chip.right<=rail.right+1}''',timeout=3000)
             chip=page.locator('[data-cat=beverages]').bounding_box();rail=page.locator('#category-rail').bounding_box()
             visible=chip['x']>=rail['x']-1 and chip['x']+chip['width']<=rail['x']+rail['width']+1
             observations.append({'route':'/menu/#category-beverages','width':width,'active_chip_visible':visible})
-            if args.require_improvements:require(visible,'Selected category hidden on fresh load')
+            if args.require_improvements:require(visible,'Selected category hidden on fresh load: '+str({'chip':chip,'rail':rail}))
         check(f'{width}px: fresh category-link visibility audit',category_visibility)
         if args.require_improvements:
             def keyboard_visibility():

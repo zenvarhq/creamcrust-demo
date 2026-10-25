@@ -82,6 +82,10 @@
   const resizeControls=()=>{document.documentElement.style.setProperty('--menu-controls-height',controls.offsetHeight+'px');updateRail();};
   document.documentElement.classList.add('menu-document');
   new ResizeObserver(resizeControls).observe(controls);
+  // Font swaps and viewport changes can move the selected chip after initial load.
+  const resizeCategories=new ResizeObserver(()=>revealCategory(state.category));
+  resizeCategories.observe(rail);
+  rail.querySelectorAll('[data-cat]').forEach(chip=>resizeCategories.observe(chip));
   $('reset-filters').addEventListener('click',()=>{Object.assign(state,{category:'all',query:'',sort:'default',onlySaved:false});term.value='';$('menu-sort').value='default';updateURL();render();term.focus();});
   grid.addEventListener('click',e=>{
     const heart=e.target.closest('[data-heart]');if(heart){const id=heart.dataset.heart;saved.has(id)?saved.delete(id):saved.add(id);if(!write(FAVE_KEY,JSON.stringify([...saved])))$('storage-status').textContent='Browser storage is unavailable. Saved items last for this visit only.';render();(grid.querySelector(`[data-heart="${CSS.escape(id)}"]`)||$('faves-toggle')).focus();return;}
