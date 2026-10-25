@@ -92,7 +92,17 @@
     const trigger=e.target.closest('[data-open]');if(trigger)showItem(trigger.dataset.open,trigger);
   });
   $('item-close').addEventListener('click',()=>dialog.close());dialog.addEventListener('click',e=>{if(e.target===dialog)dialog.close();});
-  dialog.addEventListener('close',()=>{document.body.style.overflow='';if(opener?.isConnected)opener.focus();else term.focus();if(new URL(location.href).searchParams.has('item'))updateURL();});
+  dialog.addEventListener('close',()=>{
+    if(dialog.open)return;
+    document.body.style.overflow='';
+    const active=document.activeElement;
+    // Native focus restoration may finish before this queued event. Do not
+    // steal focus from a subsequent action such as saving a menu item.
+    if(active===document.body||dialog.contains(active)||!active?.isConnected){
+      if(opener?.isConnected)opener.focus();else term.focus();
+    }
+    if(new URL(location.href).searchParams.has('item'))updateURL();
+  });
   window.addEventListener('popstate',readURL);window.addEventListener('hashchange',readURL);readURL();
   document.fonts.ready.then(()=>revealCategory(state.category));
   const item=new URL(location.href).searchParams.get('item');if(item)showItem(item);
