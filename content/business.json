@@ -2,7 +2,11 @@
   "name": "CreamCrust Café",
   "locality": "Hosur",
   "street": "Bagalur Road",
-  "addressLines": ["39/1/1, TNHB Colony", "Bagalur Road, Hosur", "Tamil Nadu 635109"],
+  "addressLines": [
+    "39/1/1, TNHB Colony",
+    "Bagalur Road, Hosur",
+    "Tamil Nadu 635109"
+  ],
   "phone": "+91 82203 62090",
   "phoneHref": "tel:+918220362090",
   "hours": "Hours unconfirmed. Public listings differ.",
@@ -31,6 +35,17 @@
     "notice": "40 public-listing observations from 24 October 2026. Dine-in prices, ingredients and availability remain unverified.",
     "approvedForLiveUse": false
   },
-  "noContact": {"from": "2026-10-25", "through": "2026-11-23", "contactActionsEnabled": false},
-  "deployment": {"publiclyDeployed": false, "noindex": true}
+  "noContact": {
+    "from": "2026-10-25",
+    "through": "2026-11-23",
+    "contactActionsEnabled": false
+  },
+  "deployment": {
+    "publiclyDeployed": true,
+    "publicUrl": "https://zenvarhq.github.io/creamcrust-demo/",
+    "repositoryUrl": "https://github.com/zenvarhq/creamcrust-demo",
+    "hosting": "GitHub Pages",
+    "status": "Public unofficial demonstration; business approval pending",
+    "noindex": true
+  }
 }

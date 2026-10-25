@@ -1,7 +1,7 @@
 /* Local menu demonstration: no checkout or owner-approved pricing. */
 (() => {
   'use strict';
-  const {esc,load,price,picture,read,write,categoryArt,business} = window.CC, data=load(), FAVE_KEY='cc_saved_items_v1';
+  const {esc,load,price,picture,imageAlt,read,write,categoryArt,business} = window.CC, data=load(), FAVE_KEY='cc_saved_items_v1';
   const $=id=>document.getElementById(id), grid=$('menu-grid'), rail=$('category-rail'), term=$('menu-search'), dialog=$('item-dialog');
   const state={category:'all',query:'',sort:'default',onlySaved:false,hidePrices:read('cc_hide_prices_v1')==='1'};
   let saved=new Set(), opener=null;
@@ -18,7 +18,7 @@
   }
   function card(i){
     const art=picture(i).endsWith('.svg');
-    return `<article class="product-card"><div class="product-art"><button class="photo-open" type="button" data-open="${esc(i.id)}" aria-label="View ${esc(i.name)} details"><img src="${picture(i).replace('.webp','-small.webp')}" data-fallback="${categoryArt(i.category)}" alt="${art?'Original category artwork':'Illustrative category photograph'}; not an image of this menu item" width="320" height="320" loading="lazy"><span class="photo-label">${art?'Category art':'Illustrative'}</span></button><button type="button" class="heart" data-heart="${esc(i.id)}" aria-label="${saved.has(i.id)?'Unsave':'Save'} ${esc(i.name)}" aria-pressed="${saved.has(i.id)}">${saved.has(i.id)?'♥':'♡'}</button></div><div class="product-body"><p class="product-cat">${esc(categoryLabel(i.category))}</p><h3 class="product-title">${esc(i.name)}</h3>${i.available===false?'<p class="availability">Unavailable in local preview</p>':''}<div class="product-footer"><span class="product-price ${state.hidePrices?'is-hidden':''}">${state.hidePrices?'Price pending approval':price(i.price)}<small>${state.hidePrices?'Price hidden for this preview':edited(i)?'Local demo price*':esc(business.menu.priceContext)}</small></span><button class="details-button" type="button" data-open="${esc(i.id)}" aria-label="Details for ${esc(i.name)}">Details ↗</button></div></div></article>`;
+    return `<article class="product-card"><div class="product-art"><button class="photo-open" type="button" data-open="${esc(i.id)}" aria-label="View ${esc(i.name)} details"><img src="${picture(i).replace('.webp','-small.webp')}" data-fallback="${categoryArt(i.category)}" alt="${esc(imageAlt(i))}" width="320" height="320" loading="lazy"><span class="photo-label">${art?'Category art':'Illustrative'}</span></button><button type="button" class="heart" data-heart="${esc(i.id)}" aria-label="${saved.has(i.id)?'Unsave':'Save'} ${esc(i.name)}" aria-pressed="${saved.has(i.id)}">${saved.has(i.id)?'♥':'♡'}</button></div><div class="product-body"><p class="product-cat">${esc(categoryLabel(i.category))}</p><h3 class="product-title">${esc(i.name)}</h3>${i.available===false?'<p class="availability">Unavailable in local preview</p>':''}<div class="product-footer"><span class="product-price ${state.hidePrices?'is-hidden':''}">${state.hidePrices?'Price pending approval':price(i.price)}<small>${state.hidePrices?'Price hidden for this preview':edited(i)?'Local demo price*':'Unverified public price*'}</small></span><button class="details-button" type="button" data-open="${esc(i.id)}" aria-label="Details for ${esc(i.name)}">Details ↗</button></div></div></article>`;
   }
   function render(){
     const list=filtered(); grid.innerHTML=list.map(card).join(''); grid.hidden=!list.length; $('empty-state').hidden=!!list.length;
@@ -40,21 +40,48 @@
     state.query=url.searchParams.get('q')||'';state.sort=['price-asc','price-desc','name'].includes(url.searchParams.get('sort'))?url.searchParams.get('sort'):'default';state.onlySaved=url.searchParams.get('saved')==='1';
     state.hidePrices=url.searchParams.has('prices')?url.searchParams.get('prices')==='hidden':read('cc_hide_prices_v1')==='1';
     term.value=state.query;$('menu-sort').value=state.sort;render();
+    requestAnimationFrame(()=>revealCategory(state.category));
+  }
+  function revealCategory(id){
+    const chip=rail.querySelector(`[data-cat="${CSS.escape(id)}"]`);if(!chip)return;
+    // Scroll only the rail; scrollIntoView can unexpectedly move the whole page.
+    const start=chip.offsetLeft-rail.offsetLeft,end=start+chip.offsetWidth;
+    if(start<rail.scrollLeft+6)rail.scrollLeft=Math.max(0,start-6);
+    else if(end>rail.scrollLeft+rail.clientWidth-6)rail.scrollLeft=end-rail.clientWidth+6;
+    updateRail();
+  }
+  function updateRail(){
+    const max=Math.max(0,rail.scrollWidth-rail.clientWidth);
+    $('category-prev').disabled=rail.scrollLeft<2;
+    $('category-next').disabled=rail.scrollLeft>=max-2;
   }
   function showItem(id,trigger){
     const i=data.items.find(x=>x.id===id);if(!i)return;opener=trigger||grid.querySelector(`[data-open="${CSS.escape(id)}"]`);
-    $('item-dialog-content').innerHTML=`<div class="modal-layout"><div class="modal-photo"><img class="${picture(i).endsWith('.svg')?'category-art':''}" src="${picture(i)}" data-fallback="${categoryArt(i.category)}" alt="Category illustration; not a photograph of ${esc(i.name)}" width="550" height="650"></div><div class="modal-copy"><p class="modal-overline">${esc(categoryLabel(i.category))} · Menu preview</p><h2 id="item-title">${esc(i.name)}</h2><div class="modal-price ${state.hidePrices?'is-hidden':''}">${state.hidePrices?'Price pending approval':price(i.price)+'*'}</div><p class="modal-clarity">${esc(i.description||'A public-listing observation. Ingredients, variations, allergens and current availability remain unverified.')}</p><p class="availability">${i.available===false?'Unavailable in this local demonstration.':'Availability has not been confirmed by the café.'}</p><hr class="modal-divider"><div class="modal-actions"><a href="${esc(business.links.swiggy)}" target="_blank" rel="noopener noreferrer">View public Swiggy listing <span>↗</span></a><a href="${esc(business.links.maps)}" target="_blank" rel="noopener noreferrer">View Maps search <span>↗</span></a></div><p class="modal-small">${edited(i)?'Locally edited demonstration price.':esc(business.menu.priceContext)+'. Snapshot: '+esc(business.menu.sourceDate)+'.'} Dine-in prices unverified. Category image is illustrative. This demo accepts no orders.</p></div></div>`;
+    $('item-dialog-content').innerHTML=`<div class="modal-layout"><div class="modal-photo"><img class="${picture(i).endsWith('.svg')?'category-art':''}" src="${picture(i).replace('.webp','-medium.webp')}" data-fallback="${categoryArt(i.category)}" alt="${esc(imageAlt(i))}" width="550" height="650"></div><div class="modal-copy"><p class="modal-overline">${esc(categoryLabel(i.category))} · Menu preview</p><h2 id="item-title">${esc(i.name)}</h2><div class="modal-price ${state.hidePrices?'is-hidden':''}">${state.hidePrices?'Price pending approval':price(i.price)+'*'}</div><p class="modal-clarity">${esc(i.description||'A public-listing observation. Ingredients, variations, allergens and current availability remain unverified.')}</p><p class="availability">${i.available===false?'Unavailable in this local demonstration.':'Availability has not been confirmed by the café.'}</p><hr class="modal-divider"><div class="modal-actions"><a href="${esc(business.links.swiggy)}" target="_blank" rel="noopener noreferrer">View public Swiggy listing <span>↗</span></a><a href="${esc(business.links.maps)}" target="_blank" rel="noopener noreferrer">View Maps search <span>↗</span></a></div><p class="modal-small">${edited(i)?'Locally edited demonstration price.':esc(business.menu.priceContext)+'. Snapshot: '+esc(business.menu.sourceDate)+'.'} Dine-in prices unverified. Category image is illustrative. This demo accepts no orders.</p></div></div>`;
     document.body.style.overflow='hidden';dialog.showModal();$('item-close').focus();
   }
+  if(read(window.CC.KEY))$('storage-status').textContent='Local demonstration catalogue active in this browser. These edits are not published or owner approved.';
   $('all-count').textContent=data.items.length;
   rail.insertAdjacentHTML('beforeend',data.categories.map(c=>`<button type="button" class="cat-chip" data-cat="${esc(c.id)}" aria-pressed="false">${esc(c.label)} <span>${data.items.filter(i=>i.category===c.id).length}</span></button>`).join(''));
-  rail.addEventListener('click',e=>{const b=e.target.closest('[data-cat]');if(!b)return;state.category=b.dataset.cat;state.onlySaved=false;updateURL(true);render();b.scrollIntoView({inline:'nearest',block:'nearest',behavior:'instant'});});
+  rail.addEventListener('click',e=>{const b=e.target.closest('[data-cat]');if(!b)return;state.category=b.dataset.cat;state.onlySaved=false;updateURL(true);render();revealCategory(state.category);});
+  rail.addEventListener('keydown',e=>{
+    if(!['ArrowLeft','ArrowRight','Home','End'].includes(e.key)||!e.target.matches('[data-cat]'))return;
+    e.preventDefault();const chips=[...rail.querySelectorAll('[data-cat]')],index=chips.indexOf(e.target);
+    const next=e.key==='Home'?0:e.key==='End'?chips.length-1:Math.max(0,Math.min(chips.length-1,index+(e.key==='ArrowRight'?1:-1)));
+    revealCategory(chips[next].dataset.cat);chips[next].focus({preventScroll:true});
+  });
   term.addEventListener('input',()=>{state.query=term.value;updateURL();render();});
   $('clear-search').addEventListener('click',()=>{state.query='';term.value='';updateURL();render();term.focus();});
   $('menu-sort').addEventListener('change',e=>{state.sort=e.target.value;updateURL();render();});
   $('faves-toggle').addEventListener('click',()=>{state.onlySaved=!state.onlySaved;updateURL();render();});
   $('price-toggle').addEventListener('click',()=>{state.hidePrices=!state.hidePrices;write('cc_hide_prices_v1',state.hidePrices?'1':'0');updateURL();render();});
   $('category-next').addEventListener('click',()=>rail.scrollBy({left:Math.max(160,rail.clientWidth*.7),behavior:matchMedia('(prefers-reduced-motion:reduce)').matches?'instant':'smooth'}));
+  $('category-prev').addEventListener('click',()=>rail.scrollBy({left:-Math.max(160,rail.clientWidth*.7),behavior:matchMedia('(prefers-reduced-motion:reduce)').matches?'instant':'smooth'}));
+  rail.addEventListener('scroll',updateRail,{passive:true});
+  const controls=$('menu-controls');
+  const resizeControls=()=>{document.documentElement.style.setProperty('--menu-controls-height',controls.offsetHeight+'px');updateRail();};
+  document.documentElement.classList.add('menu-document');
+  new ResizeObserver(resizeControls).observe(controls);
   $('reset-filters').addEventListener('click',()=>{Object.assign(state,{category:'all',query:'',sort:'default',onlySaved:false});term.value='';$('menu-sort').value='default';updateURL();render();term.focus();});
   grid.addEventListener('click',e=>{
     const heart=e.target.closest('[data-heart]');if(heart){const id=heart.dataset.heart;saved.has(id)?saved.delete(id):saved.add(id);if(!write(FAVE_KEY,JSON.stringify([...saved])))$('storage-status').textContent='Browser storage is unavailable. Saved items last for this visit only.';render();(grid.querySelector(`[data-heart="${CSS.escape(id)}"]`)||$('faves-toggle')).focus();return;}
@@ -63,5 +90,6 @@
   $('item-close').addEventListener('click',()=>dialog.close());dialog.addEventListener('click',e=>{if(e.target===dialog)dialog.close();});
   dialog.addEventListener('close',()=>{document.body.style.overflow='';if(opener?.isConnected)opener.focus();else term.focus();if(new URL(location.href).searchParams.has('item'))updateURL();});
   window.addEventListener('popstate',readURL);window.addEventListener('hashchange',readURL);readURL();
+  document.fonts.ready.then(()=>revealCategory(state.category));
   const item=new URL(location.href).searchParams.get('item');if(item)showItem(item);
 })();

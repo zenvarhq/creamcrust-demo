@@ -14,7 +14,9 @@
     return data.categories.every(c => typeof c.id === 'string' && typeof c.label === 'string') && data.items.every(i => {
       if (!i || typeof i.id !== 'string' || ids.has(i.id) || typeof i.name !== 'string' || !categories.has(i.category)) return false;
       ids.add(i.id);
-      return i.price === null || (typeof i.price === 'number' && Number.isFinite(i.price) && i.price >= 0 && i.price <= 1000000);
+      return (i.price === null || (Number.isInteger(i.price) && i.price >= 0 && i.price <= 1000000)) &&
+        (i.available == null || typeof i.available === 'boolean') &&
+        (i.description == null || typeof i.description === 'string');
     });
   };
   const read = key => { try { return localStorage.getItem(key); } catch { return null; } };
@@ -34,5 +36,9 @@
   const picture = item => {
     return photoNames[item.category]?asset('assets/images/'+photoNames[item.category]+'.webp'):categoryArt(item.category);
   };
-  window.CC = {KEY, clone, esc, valid, read, write, load, price, picture,categoryArt,sanitize,business:window.CREAMCRUST_BUSINESS};
+  const photoSubjects = {'nc-chicken':'Fried chicken on brown paper','nc-waffle':'Waffles with ice cream','nc-icecream':'Ice cream cone against a coloured background','nc-burger':'Fried chicken sandwich with cabbage and pickles'};
+  const imageAlt = item => photoNames[item.category]
+    ? photoSubjects[photoNames[item.category]]+'; illustrative photograph, not a CreamCrust product or this specific menu item'
+    : 'Original '+(['waffles','sundaes','ice-cream'].includes(item.category)?'dessert':['shakes','falooda','beverages'].includes(item.category)?'drink':'savoury')+' category artwork; not a product photograph';
+  window.CC = {KEY, clone, esc, valid, read, write, load, price, picture,imageAlt,categoryArt,sanitize,business:window.CREAMCRUST_BUSINESS};
 })();
