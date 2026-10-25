@@ -21,16 +21,56 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - uses: actions/checkout@v6
-      - name: Import the reviewed initial snapshot once
+        with:
+          fetch-depth: 2
+      - name: Apply a reviewed source update only when its upload changes
         run: |
-          if [ ! -f index.html ]; then
-            unzip -oq creamcrust-demo-upload.zip
+          if git diff --name-only HEAD^ HEAD -- creamcrust-demo-upload.zip | grep -q .; then
+            python - <<'PY'
+          from pathlib import Path, PurePosixPath
+          import zipfile, stat
+          allowed_roots = {'assets','content','data','gallery','menu','story','studio','visit','tests','docs'}
+          allowed_files = {'.gitignore','.nojekyll','README.md','ASSET_RIGHTS.md','index.html','requirements-dev.txt'}
+          with zipfile.ZipFile('creamcrust-demo-upload.zip') as bundle:
+              for entry in bundle.infolist():
+                  path = PurePosixPath(entry.filename)
+                  assert not path.is_absolute() and '..' not in path.parts and '\\' not in entry.filename
+                  assert path.parts and (path.parts[0] in allowed_roots or entry.filename in allowed_files)
+                  assert not stat.S_ISLNK(entry.external_attr >> 16)
+                  assert entry.file_size < 5_000_000
+              assert sum(e.file_size for e in bundle.infolist()) < 25_000_000
+              bundle.extractall(Path.cwd())
+          PY
             git config user.name 'github-actions[bot]'
             git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
             git add .gitignore .nojekyll README.md ASSET_RIGHTS.md index.html assets content data gallery menu story studio visit
-            git commit -m 'Import tested unofficial website snapshot'
-            git push origin HEAD:main
+            for path in tests docs requirements-dev.txt; do
+              if [ -e "$path" ]; then git add "$path"; fi
+            done
+            if ! git diff --cached --quiet; then
+              git commit -m 'Apply reviewed unofficial demo improvements'
+              git push origin HEAD:main
+            fi
           fi
+      - uses: actions/setup-python@v6
+        if: hashFiles('requirements-dev.txt') != ''
+        with:
+          python-version: '3.12'
+      - name: Verify the browser demonstration before publishing
+        if: hashFiles('requirements-dev.txt') != ''
+        run: |
+          pip install -r requirements-dev.txt
+          python -m playwright install --with-deps chromium
+          python -m http.server 8000 --bind 127.0.0.1 > /tmp/creamcrust-server.log 2>&1 &
+          python tests/browser_test.py --url http://127.0.0.1:8000 --output .qa/browser
+          python tests/studio_integrity.py --url http://127.0.0.1:8000 --output .qa/studio
+          python tests/owner_audit.py --url http://127.0.0.1:8000 --output .qa/visual --require-improvements
+      - uses: actions/upload-artifact@v4
+        if: always() && hashFiles('requirements-dev.txt') != ''
+        with:
+          name: browser-evidence
+          path: .qa
+          include-hidden-files: true
       - name: Prepare only website files
         run: |
           mkdir _site
