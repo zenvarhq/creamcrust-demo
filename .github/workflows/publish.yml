@@ -1,0 +1,44 @@
+name: Publish unofficial demonstration
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v6
+      - name: Import the reviewed initial snapshot once
+        run: |
+          if [ ! -f index.html ]; then
+            unzip -oq creamcrust-demo-upload.zip
+            git config user.name 'github-actions[bot]'
+            git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+            git add .gitignore .nojekyll README.md ASSET_RIGHTS.md index.html assets content data gallery menu story studio visit
+            git commit -m 'Import tested unofficial website snapshot'
+            git push origin HEAD:main
+          fi
+      - name: Prepare only website files
+        run: |
+          mkdir _site
+          cp -R index.html assets content data gallery menu story studio visit .nojekyll ASSET_RIGHTS.md _site/
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v4
+        with:
+          path: _site
+      - name: Deploy the unofficial demonstration
+        id: deployment
+        uses: actions/deploy-pages@v4
