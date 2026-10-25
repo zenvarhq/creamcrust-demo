@@ -76,6 +76,14 @@ with sync_playwright() as p:
                 trigger.click();expect(page.locator('#item-title')).to_have_text(item['name'])
                 expect(page.locator('#item-dialog')).to_contain_text('Dine-in prices unverified')
                 expect(page.locator('#item-dialog')).to_contain_text('illustrative')
+                if item==source['items'][0]:
+                    page.add_script_tag(path=str(tool))
+                    audit=page.evaluate('''async()=>{const r=await axe.run(document,{runOnly:{type:'tag',values:['wcag2a','wcag2aa','wcag21aa','best-practice']}});return {passes:r.passes.length,violations:r.violations.map(v=>({id:v.id,impact:v.impact,nodes:v.nodes.map(n=>n.target)}))}}''')
+                    audit.update(route='/menu/ (open product popup)',width=width);axe.append(audit)
+                    require(not audit['violations'],'Popup accessibility violations: '+str(audit['violations']))
+                    for _ in range(8):
+                        page.keyboard.press('Tab')
+                        require(page.evaluate('document.activeElement.closest("#item-dialog")!==null'),'Tab escaped the product popup')
                 page.keyboard.press('Escape');expect(trigger).to_be_focused()
             require(not page.locator('#item-dialog').is_visible(),'Dialog did not close')
         check(f'{width}px: all 40 details open, disclose source, close with ESC and restore focus',details)

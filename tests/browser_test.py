@@ -137,7 +137,10 @@ with sync_playwright() as playwright:
                         page.locator('.menu-toggle').press('Enter');expect(page.locator('.nav-mobile')).to_be_visible()
                         page.keyboard.press('Escape');expect(page.locator('.menu-toggle')).to_be_focused();expect(page.locator('.menu-toggle')).to_have_attribute('aria-expanded','false')
                         page.locator('.menu-toggle').click();page.locator('.nav-mobile').get_by_role('link',name='The Concept',exact=True).click();require(page.url.endswith('/story/'),'Mobile route failed')
-                    page.goto(BASE+'/gallery/');photo=page.locator('.gallery-photo').first;photo.press('Enter');expect(page.locator('.gallery-dialog')).to_be_visible();page.keyboard.press('Escape');expect(photo).to_be_focused()
+                    page.goto(BASE+'/gallery/');photo=page.locator('.gallery-photo').first;photo.press('Enter');expect(page.locator('.gallery-dialog')).to_be_visible()
+                    for _ in range(3):
+                        page.keyboard.press('Tab');require(page.evaluate('document.activeElement.closest(".gallery-dialog")!==null'),'Tab escaped the gallery viewer')
+                    page.keyboard.press('Escape');expect(photo).to_be_focused()
                 check(f'{width}px navigation and gallery keyboard dialog',navigation)
                 page.close();context.close()
 
